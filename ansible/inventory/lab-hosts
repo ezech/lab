@@ -1,0 +1,55 @@
+all:
+  vars:
+    dir_lab_ca:  "/etc/pki/lab"
+
+lab:
+  hosts:
+    localhost:
+
+web:
+  hosts:
+    www.playbox2.local:
+db:
+  hosts:
+    pg1.playbox2.local:
+    pg2.playbox2.local:
+    pg3.playbox2.local:
+gitlab:
+  hosts:
+    gitlab.playbox2.local
+  vars:
+    external_url: "https://gitlab.playbox2.local"
+    gitlab_repo_url: "https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/config_file.repo?os=fedora&dist=42&source=script"
+    gitlab_repo_dest: "/etc/yum.repos.d/gitlab_gitlab-ce.repo"
+smtp:
+  hosts:
+    smtp.playbox2.local
+dns:
+  hosts:
+    ns.playbox2.local
+ca:
+  hosts:
+    localhost:
+  vars:
+    secret_ca_passphrase: "labCAsetup"
+    secret_ca_intermediate_passphrase: "labCAIntersetup"
+    ca_o:        "Playbox2Lab"
+    ca_ou:       "CA"
+    ca_cn:       "CA Root"
+    ca_inter_o:  "Playbox2Lab"
+    ca_inter_ou: "CA"
+    ca_inter_cn: "CA Intermediate"
+    gitlab_o:    "Playbox2Lab"
+    gitlab_ou:   "CICD"
+    gitlab_cn:   "gitlab.playbox2.local"
+
+k8s:
+  hosts:
+    k8s.playbox2.local
+  vars:
+    k8s_host: k8s.playbox2.local
+    k8s_port: 6443
+    subnet_pod: 10.244.0.0/16
+    subnet_service: 10.96.0.0/12
+    k8s_version: v1.33.0
+    k8s_config_dest: /home/ezech/kubeadm-conf.yaml

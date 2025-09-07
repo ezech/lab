@@ -1,0 +1,105 @@
+---
+- name: Install packages
+  dnf:
+    name:
+      - kubernetes1.33
+      - kubernetes1.33-client
+      - kubernetes1.33-kubeadm
+      - kubernetes1.33-systemd
+      - cri-o1.33
+      - containernetworking-plugins
+    state: present
+    update_cache: yes
+
+- name: Add kernel module overlay
+  community.general.modprobe:
+    name: overlay
+    state: present
+
+- name: Add kernel module br_netfilter
+  community.general.modprobe:
+    name: br_netfilter
+    state: present
+
+- name: Add ipv4 forwarding and bridge
+  ansible.builtin.copy:
+    src: k8s.conf
+    dest: /etc/modules-load.d/k8s.conf
+
+- name: Add sysctl parameters
+  ansible.builtin.copy:
+    src: sysctl_k8s.conf
+    dest: /etc/sysctl.d/k8s.conf
+
+- name: Add sysctl parameters nfcall ipv4
+  ansible.posix.sysctl:
+    name: net.bridge.bridge-nf-call-iptables
+    value: '1'
+    sysctl_file: /etc/sysctl.d/k8s.conf
+    reload: false
+
+- name: Add sysctl parameters nfcall ipv6
+  ansible.posix.sysctl:
+    name: net.bridge.bridge-nf-call-ip6tables
+    value: '1'
+    sysctl_file: /etc/sysctl.d/k8s.conf
+    reload: false
+
+- name: Add sysctl parameters ip_forward
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_file: /etc/sysctl.d/k8s.conf
+    reload: true
+
+- name: Enable kubelet
+  ansible.builtin.systemd_service:
+    name: kubelet
+    state: started
+    enabled: true
+ 
+- name: Enable cri-o
+  ansible.builtin.systemd_service:
+    name: crio
+    state: started
+    enabled: true
+
+- name: Config kubernetes from template
+  ansible.builtin.template:
+    src: kubeadm-conf.j2
+    dest: "{{ k8s_config_dest }}"
+ 
+- name: Load kubernetes images
+  ansible.builtin.command: kubeadm config images pull
+
+- name: Initialize Kubernetes cluster
+  ansible.builtin.command: |
+    kubeadm init
+      --control-plane-endpoint {{ k8s_host }}:{{ k8s_port }}
+      --upload-certs 
+      --pod-network-cidr {{ subnet_pod }}
+      --service-cidr {{ subnet_service }}
+    args:
+      creates: /etc/kubernetes/admin.conf
+    register: kubeadm_init
+    changed_when: kubeadm_init.rc == 0 
+- name: Create .kube directory
+  ansible.builtin.file:
+    path: /home/{{ ansible_user }}/.kube
+    state: directory
+    mode: '0755'
+    owner: "{{ ansible_user }}"
+
+- name: Copy Kubernetes admin.conf to user's home directory
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/{{ ansible_user }}/.kube/config
+    owner: "{{ ansible_user }}"
+    mode: '0644'
+
+- name: Change ownership of admin.conf
+  ansible.builtin.file:
+    path: /home/{{ ansible_user }}/.kube/config
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'

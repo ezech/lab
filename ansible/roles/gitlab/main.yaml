@@ -1,0 +1,32 @@
+---
+- name: Ensure required dependencies are installed
+  dnf:
+    name:
+      - curl
+      - policycoreutils
+    state: present
+    update_cache: yes
+
+- name: Add GitLab CE repository
+  get_url:
+    url:  "{{ gitlab_repo_url }}"
+    dest: "{{ gitlab_repo_dest }}"
+    mode: '0644'
+
+- name: Install GitLab CE
+  dnf:
+    name: gitlab-ce
+    state: present
+
+- name: Configure GitLab to use custom TLS cert
+  blockinfile:
+    path: /etc/gitlab/gitlab.rb
+    block: |
+      external_url "{{ external_url }}"
+      nginx['ssl_certificate'] = "{{ dir_lab_ca }}/certs/gitlab.crt"
+      nginx['ssl_certificate_key'] = "{{ dir_lab_ca }}/private/gitlab.key"
+      letsencrypt['enable'] = false
+
+- name: Reconfigure GitLab
+  ansible.builtin.command: /opt/gitlab/bin/gitlab-ctl reconfigure
+

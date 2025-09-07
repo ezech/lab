@@ -1,0 +1,144 @@
+---
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{ dir_lab_ca }}/root"
+    - "{{ dir_lab_ca }}/certs"
+    - "{{ dir_lab_ca }}/private"
+    - "{{ dir_lab_ca }}/intermediate"
+
+- name: Create private key with password protection
+  community.crypto.openssl_privatekey:
+    path: "{{ dir_lab_ca }}/root/ca.key"
+    passphrase: "{{ secret_ca_passphrase }}"
+  run_once: true
+
+- name: Create certificate signing request (CSR) for CA certificate
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ dir_lab_ca }}/root/ca.key"
+    privatekey_passphrase: "{{ secret_ca_passphrase }}"
+    common_name: "{{ ca_cn }}" 
+    use_common_name_for_san: false  # since we do not specify SANs, don't use CN as a SAN
+    basic_constraints:
+      - 'CA:TRUE'
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+    key_usage_critical: true
+  register: ca_csr
+
+- name: Create self-signed CA certificate from CSR
+  community.crypto.x509_certificate:
+    path: "{{ dir_lab_ca }}/root/ca.crt"
+    csr_content: "{{ ca_csr.csr }}"
+    privatekey_path: "{{ dir_lab_ca }}/root/ca.key"
+    privatekey_passphrase: "{{ secret_ca_passphrase }}"
+    provider: selfsigned
+
+- name: Create private key for intermediate
+  community.crypto.openssl_privatekey:
+    path: "{{ dir_lab_ca }}/intermediate/intermediate.key"
+    passphrase: "{{ secret_ca_intermediate_passphrase }}"
+  run_once: true
+
+- name: Create certificate signing request (CSR) for intermediate
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ dir_lab_ca }}/intermediate/intermediate.key"
+    privatekey_passphrase: "{{ secret_ca_intermediate_passphrase }}"
+    common_name: "{{ ca_inter_cn }}" 
+    use_common_name_for_san: false  # since we do not specify SANs, don't use CN as a SAN
+    basic_constraints:
+      - 'CA:TRUE'
+      - 'pathlen:0'
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+      - digitalSignature
+    key_usage_critical: true
+  run_once: true
+  register: csr_intermediate
+
+- name: Sign certificate with our CA
+  community.crypto.x509_certificate_pipe:
+    csr_content: "{{ csr_intermediate.csr }}"
+    provider: ownca
+    ownca_path: "{{ dir_lab_ca }}/root/ca.crt"
+    ownca_privatekey_path: "{{ dir_lab_ca }}/root/ca.key"
+    ownca_privatekey_passphrase: "{{ secret_ca_passphrase }}"
+    ownca_not_after: +3650d
+    ownca_not_before: "-1d"
+  run_once: true
+  register: certificate_intermediate
+
+- name: Write intermediatecertificate file on server
+  copy:
+    dest: "{{ dir_lab_ca }}/intermediate/intermediate.crt"
+    content: "{{ certificate_intermediate.certificate }}"
+  run_once: true
+
+- name: Create private key for gitlab
+  community.crypto.openssl_privatekey:
+    path: "{{ dir_lab_ca }}/private/gitlab.key"
+  run_once: true
+
+- name: Create certificate signing request (CSR) for gitlab
+  community.crypto.openssl_csr_pipe: 
+    privatekey_path: "{{ dir_lab_ca }}/private/gitlab.key"
+    subject_alt_name:
+      - "DNS:gitlab.playbox2.local"
+  register: csr_gitlab
+
+- name: Sign certificate with our intermediate CA
+  community.crypto.x509_certificate_pipe:
+    csr_content: "{{ csr_gitlab.csr }}"
+    provider: ownca
+    ownca_path: "{{ dir_lab_ca }}/intermediate/intermediate.crt"
+    ownca_privatekey_path: "{{ dir_lab_ca }}/intermediate/intermediate.key"
+    ownca_privatekey_passphrase: "{{ secret_ca_intermediate_passphrase }}"
+    ownca_not_after: +365d
+    ownca_not_before: "-1d"
+  run_once: true
+  register: certificate_gitlab
+
+- name: Write certificate file
+  copy:
+    dest: "{{ dir_lab_ca }}/certs/gitlab.crt"
+    content: "{{ certificate_gitlab.certificate }}"
+  run_once: true
+
+- name: Create private key for smtp
+  community.crypto.openssl_privatekey:
+    path: "{{ dir_lab_ca }}/private/smtp.key"
+  run_once: true
+
+- name: Create certificate signing request (CSR) for smtp
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ dir_lab_ca }}/private/smtp.key"
+    subject_alt_name:
+      - "DNS:smtp.playbox2.local"
+      - "DNS:smtp.playbox2.lab"
+      - "DNS:playbox2.lab"
+      - "DNS:playbox2"
+  register: csr_smtp
+
+  
+- name: Sign certificate with our intermediate CA
+  community.crypto.x509_certificate_pipe:
+    csr_content: "{{ csr_smtp.csr }}"
+    provider: ownca
+    ownca_path: "{{ dir_lab_ca }}/intermediate/intermediate.crt"
+    ownca_privatekey_path: "{{ dir_lab_ca }}/intermediate/intermediate.key"
+    ownca_privatekey_passphrase: "{{ secret_ca_intermediate_passphrase }}"
+    ownca_not_after: +365d
+    ownca_not_before: "-1d"
+  run_once: true
+  register: certificate_smtp
+
+- name: Write certificate file
+  copy:
+    dest: "{{ dir_lab_ca }}/certs/smtp.crt"
+    content: "{{ certificate_smtp.certificate }}"
+  run_once: true
+

@@ -1,0 +1,27 @@
+---
+- hosts: ca
+  become: true
+  roles: 
+    - role: ca
+      tags:
+        - hospodar
+
+- hosts: lab
+  become: true
+  roles:
+    - role: gitlab
+      tags:
+        - web
+        - gitlab
+    - role: smtp
+      tags:
+        - smtp
+
+- hosts: k8s
+  become: true
+  roles:
+    - role: k8s
+      tags:
+        - hospodar
+        - kubernetes
+

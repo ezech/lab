@@ -1,0 +1,16 @@
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: InitConfiguration
+nodeRegistration:
+  criSocket: "unix:///var/run/cri-crio.sock"
+localAPIEndpoint:
+  advertiseAddress: "{{ k8s_host }}"
+  bindPort: "{{ k8s_port }}"
+
+---
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: ClusterConfiguration
+networking:
+  podSubnet: "{{ subnet_pod }}"
+  serviceSubnet: "{{ subnet_service }}"
+kubernetesVersion: "{{ k8s_version }}"
+controlPlaneEndpoint: "{{ ansible_host }}:{{ k8s_port }}"
