@@ -1,6 +1,13 @@
 all:
   vars:
+    hostname_suffix_lab: lab.playbox3.local  # same as Fedora hostname
     dir_lab_ca:  "/etc/pki/lab"
+
+cicd:
+  hosts:
+    localhost:
+  vars:
+    hostname_cicd: "cicd.{{ hostname_suffix_lab }}"
 
 lab:
   hosts:
@@ -8,25 +15,25 @@ lab:
 
 web:
   hosts:
-    www.playbox2.local:
+    "www.{{ hostname_suffix_lab }}":
 db:
   hosts:
-    pg1.playbox2.local:
-    pg2.playbox2.local:
-    pg3.playbox2.local:
+    "pg1.{{ hostname_suffix_lab }}":
+    "pg2.{{ hostname_suffix_lab }}":
+    "pg3.{{ hostname_suffix_lab }}":
 gitlab:
   hosts:
-    gitlab.playbox2.local
+    "gitlab.{{ hostname_suffix_lab }}"
   vars:
-    external_url: "https://gitlab.playbox2.local"
+    external_url: "https://gitlab.{{ hostname_suffix_lab }}"
     gitlab_repo_url: "https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/config_file.repo?os=fedora&dist=42&source=script"
     gitlab_repo_dest: "/etc/yum.repos.d/gitlab_gitlab-ce.repo"
 smtp:
   hosts:
-    smtp.playbox2.local
+    "smtp.{{ hostname_suffix_lab }}"
 dns:
   hosts:
-    ns.playbox2.local
+    "ns.{{ hostname_suffix_lab }}"
 ca:
   hosts:
     localhost:
@@ -41,13 +48,13 @@ ca:
     ca_inter_cn: "CA Intermediate"
     gitlab_o:    "Playbox2Lab"
     gitlab_ou:   "CICD"
-    gitlab_cn:   "gitlab.playbox2.local"
+    gitlab_cn:   "gitlab.{{ hostname_suffix_lab }}"
 
 k8s:
   hosts:
-    k8s.playbox2.local
+    "k8s.{{ hostname_suffix_lab }}"
   vars:
-    k8s_host: k8s.playbox2.local
+    k8s_host: "k8s.{{ hostname_suffix_lab }}"
     k8s_port: 6443
     subnet_pod: 10.244.0.0/16
     subnet_service: 10.96.0.0/12

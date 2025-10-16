@@ -1,0 +1,7 @@
+# this play spins a vm for cicd module, a vm with storage for gitlab, nexus
+---
+- hosts: cicd
+  become: true
+  roles:
+    - role: vm_kvm
+      vm_name: "{{ hostname_cicd }}"

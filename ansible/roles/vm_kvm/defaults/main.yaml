@@ -1,0 +1,9 @@
+vm_name:      cicd.playbox3.local
+vm_memory_mb:    2048
+vm_vcpus:         2
+vm_disk_size:   10  # GB
+vm_image_url:  "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2"
+vm_image_dir:  "/home/libvirt/images"
+vm_network:    default
+vm_user:       lab
+vm_ssh_key:    "{{ lookup('file', '~/.ssh/id_ansible.pub') }}"

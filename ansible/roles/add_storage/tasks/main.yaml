@@ -1,0 +1,16 @@
+# create a qcow2 file, and add it to a specified vm
+- name: Create volume
+  virt_volume:
+    name: "{{ volume_file_name }}"
+    pool: "{{ volume_pool|default('default') }}"
+    size: 10
+    format: qcow2
+  become: true
+
+- name: Create Nexus volume (vdc)
+  virt_volume:
+    name: "{{ inventory_hostname }}-nexus.qcow2"
+    pool: default
+    size: 10
+    format: qcow2
+  become: true

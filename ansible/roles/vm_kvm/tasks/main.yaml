@@ -1,0 +1,4 @@
+---
+- name: spin_vm 
+  ansible.builtin.import_tasks: spin_vm.yaml
+#include setup_storage.yaml

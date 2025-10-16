@@ -1,0 +1,51 @@
+- name: Ensure image directory exists
+  file:
+    path: "{{ vm_image_dir }}"
+    state: directory
+
+- name: Download Debian cloud image
+  get_url:
+    url:  "{{ vm_image_url }}"
+    dest: "{{ vm_image_dir }}/{{ vm_name }}.qcow2"
+    mode: '0644'
+  when: not lookup('file', "{{ vm_image_dir }}/{{ vm_name }}.qcow2", errors='ignore')
+
+- name: Create cloud-init config
+  template:
+    src: user-data.cfg.j2
+    dest: "/tmp/{{ vm_name }}-user-data.cfg"
+
+- name: Create cloud-init ISO
+  command: >
+    genisoimage 
+      -output {{ vm_image_dir }}/{{ vm_name }}-seed.iso
+      -volid cidata 
+      -joliet 
+      -rock
+        /tmp/{{ vm_name }}-user-data.cfg
+  args:
+    creates: "{{ vm_image_dir }}/{{ vm_name }}-seed.iso"
+
+- name: Check if VM exists
+  command: "virsh dominfo {{ vm_name }}"
+  register: vm_info
+  failed_when: false
+  changed_when: false
+
+- name: Define VM only if it doesn't exist
+  become: true
+  community.libvirt.virt:
+    name: "{{ vm_name }}"
+    command: define
+    xml: "{{ lookup('template', 'vm-definition.xml.j2') }}"
+  when: vm_info.rc != 0
+
+- name: Start VM
+  community.libvirt.virt:
+    name: "{{ vm_name }}"
+    state: running
+
+- name: Set autostart
+  community.libvirt.virt:
+    name: "{{ vm_name }}"
+    autostart: true
