@@ -1,5 +1,6 @@
+#!/usr/bin/env bash
 
-dir_lab=/home/ezech/Git/github.com/ezech/lab
+dir_lab=${HOME}/Git/github.com/ezech/lab
 dir_ca=$dir_lab/lab-ca
 
 key_root=$dir_ca/private/ca.key
